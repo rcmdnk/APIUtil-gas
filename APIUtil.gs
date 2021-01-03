@@ -1,33 +1,35 @@
 class APIUtil {
   constructor(name='MyService', base_url=undefined, token_url=undefined,
-              client_id=undefined, client_secret=undefined, scope=undefined, params=undefined, 
-              token=undefined, url=undefined) {
+              client_id=undefined, client_secret=undefined, scope=undefined, params={},
+              token=undefined, url=undefined, headers={}) {
     this.name = name;
-    this.params = {base_url: base_url, token_url: token_url, client_id: client_id, client_secret: client_secret}
+    this.vars = {base_url: base_url, token_url: token_url, client_id: client_id, client_secret: client_secret}
     this.scope = scope;
     this.params = params;
     this.token = token;
     this.url = url;
+    this.headers=headers;
   }
   
-  get base_url() { return this.params.base_url; }
-  get token_url() { return this.params.token_url; }
-  get client_id() { return this.params.client_id; }
-  get client_secret() { return this.params.client_secret; }
-  set base_url(base_url) { this.params.base_url = base_url; }
-  set token_url(token_url) { this.params.token_url = token_url; }
-  set client_id(base_url) { this.params.client_id = client_id; }
-  set client_secret(client_secret) { this.params.client_secret = client_secret; }
+  get base_url() { return this.vars.base_url; }
+  get token_url() { return this.vars.token_url; }
+  get client_id() { return this.vars.client_id; }
+  get client_secret() { return this.vars.client_secret; }
+  set base_url(base_url) { this.vars.base_url = base_url; }
+  set token_url(token_url) { this.vars.token_url = token_url; }
+  set client_id(client_id) { this.vars.client_id = client_id; }
+  set client_secret(client_secret) { this.vars.client_secret = client_secret; }
   
-  get service() {
-    this.params.forEach(function(key){
-      if(!this[key])throw new Error('Set ' + key);
+  get service() { 
+    const vars = this.vars;
+    Object.keys(vars).forEach(function(key){
+      if(!vars[key])throw new Error('Set ' + key);
     });
 　  let service = OAuth2.createService(this.name)
- 　     .setAuthorizationBaseUrl(this.params.base_url)
- 　     .setTokenUrl(this.params.token_url)  
-  　    .setClientId(this.params.client_id)
- 　     .setClientSecret(this.params.client_secret)
+ 　     .setAuthorizationBaseUrl(this.vars.base_url)
+ 　     .setTokenUrl(this.vars.token_url)  
+  　    .setClientId(this.vars.client_id)
+ 　     .setClientSecret(this.vars.client_secret)
   　    .setCallbackFunction('authCallback')
   　    .setPropertyStore(PropertiesService.getUserProperties())
     if(this.scope) service = service.setScope(this.scope);
@@ -39,7 +41,7 @@ class APIUtil {
     return service;
   }
   
-  get token() {
+  getToken() {
     if(this.token)return this.token;
     const service = this.service;
     if (!service.hasAccess()) {
@@ -69,10 +71,10 @@ class APIUtil {
   
   fetch (url=undefined) {
     url = url || this.url;
+    let headers = this.headers;
+    headers['Authorization'] = 'Bearer ' + this.getToken();
     return UrlFetchApp.fetch(url, {
-      headers: {
-        Authorization: 'Bearer ' + this.token
-      }
+      headers: headers
     });                                       
   }
   
@@ -85,15 +87,8 @@ class APIUtil {
   }                 
 }
 
-function getUtil() {
-  const name = (typeof OAUTH2_NAME === 'undefined') ? undefined : OAUTH2_NAME;
-  const base_url = (typeof OAUTH2_BASE_URL === 'undefined') ? undefined : OAUTH2_BASE_URL;
-  const token_url = (typeof OAUTH2_TOKEN_URL === 'undefined') ? undefined : OAUTH2_TOKEN_URL;
-  const client_id = (typeof OAUTH2_CLIENT_ID === 'undefined') ? undefined : OAUTH2_CLIENT_ID;
-  const client_secret = (typeof OAUTH2_CLIENT_SECRET === 'undefined') ? undefined : OAUTH2_CLIENT_SECRET
-  const token = (typeof OAUTH2_TOKEN === 'undefined') ? undefined : OAUTH2_TOKEN;
-  const scope = (typeof OAUTH2_SCOPE === 'undefined') ? undefined : OAUTH2_SCOPE;
-  const params = (typeof OAUTH2_PARAMS === 'undefined') ? undefined : OAUTH2_PARAMS;
-  const url = (typeof OAUTH2_URL === 'undefined') ? undefined : OAUTH2_URL;
-  return APIUtil(name, base_url, token_url, client_id, client_secret, scope, params, token, url);
+function getUtil(name='MyService', base_url=undefined, token_url=undefined,
+                 client_id=undefined, client_secret=undefined, scope=undefined, params={},
+                 token=undefined, url=undefined, headers={}){
+  return new APIUtil(name, base_url, token_url, client_id, client_secret, scope, params, token, url, headers);
 }
